@@ -69,7 +69,7 @@ class data_manager(Indices):
 
         self.data_fnames = glob(join(source_dir, '20*.npy'))
         self.mask_fnames = glob(join(*[source_dir, 'cloudProb', '20*.npy']))
-        self.segm_fname = glob(join(*[source_dir, 'crops_segmentation.npy']))[0]
+        self.segm_fname  = glob(join(*[source_dir, 'crops_segmentation.npy']))[0]
 
         self.df_records = self.__get_df__()
         valid_selection = (self.validate_cloud_level()) & \
