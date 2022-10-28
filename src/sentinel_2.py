@@ -101,6 +101,9 @@ class data_manager(Indices):
     def get_data(self):
         return np.stack([np.load(x) for x in self.data_fnames], axis=0)
 
+    def get_mask(self, seg_type='semantic'):
+        retutn np.load(self.sem_fname if seg_type == 'semantic' else self.pan_fname)
+    
     def descrive_veg_type_(self, seg_type='semantic'):
         if seg_type == 'semantic':
             mask = np.load(self.sem_fname)[0]
@@ -113,7 +116,7 @@ class data_manager(Indices):
     
     def get_index_ts(self, function, veg_type=None, seg_type='semantic'):
         index, values = [], []
-        veg_mask = np.load(self.sem_fname if seg_type == 'semantic' else self.pan_fname)
+        veg_mask = self.get_mask(seg_type=seg_type)
             
         for i, row in self.df_records.iterrows():
 
