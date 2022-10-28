@@ -90,18 +90,29 @@ class data_manager(Indices):
                 self.__get_df_from_filelist__(self.mask_fnames).rename('masks')
             ], axis=1)
 
+    def __validate_image__(self, im):
+        ### VAlidare se il range dinamico dell'immagine e' valido.
+        ### Valore massimo dell'immagine maggiore di 10000.
+        pass
 
     def __validate_weather__(self, im):
         return (im < self.prob_thresh).mean() >= self.img_thresh
 
     def validate_cloud_snow_coverage(self):
-        _funct_ = lambda x: self.__validate_weather__(np.load(x)[0])
+        def manage_masks(x):
+            mask = np.load(x).sum(axis=0)
+            mask[mask > 100] = 100
+            return mask
+        _funct_ = lambda x: self.__validate_weather__(manage_masks(x))
         return self.df_records.masks.apply(_funct_)
 
     def get_data(self):
         return np.stack([np.load(x) for x in self.data_fnames], axis=0)
 
-    def get_mask(self, seg_type='semantic'):
+    def get_weath_mask(self):
+        return np.stack([np.load(x) for x in self.mask_fnames], axis=0)
+    
+    def get_veg_mask(self, seg_type='semantic'):
         return np.load(self.sem_fname if seg_type == 'semantic' else self.pan_fname)
     
     def descrive_veg_type_(self, seg_type='semantic'):
@@ -116,7 +127,7 @@ class data_manager(Indices):
     
     def get_index_ts(self, function, veg_type=None, seg_type='semantic'):
         index, values = [], []
-        veg_mask = self.get_mask(seg_type=seg_type)
+        veg_mask = self.get_veg_mask(seg_type=seg_type)
             
         for i, row in self.df_records.iterrows():
 
