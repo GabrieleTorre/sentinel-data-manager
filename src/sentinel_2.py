@@ -102,7 +102,7 @@ class data_manager(Indices):
         return np.stack([np.load(x) for x in self.data_fnames], axis=0)
 
     def get_mask(self, seg_type='semantic'):
-        retutn np.load(self.sem_fname if seg_type == 'semantic' else self.pan_fname)
+        return np.load(self.sem_fname if seg_type == 'semantic' else self.pan_fname)
     
     def descrive_veg_type_(self, seg_type='semantic'):
         if seg_type == 'semantic':
