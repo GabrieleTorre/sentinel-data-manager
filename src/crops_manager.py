@@ -4,6 +4,7 @@ from shapely.geometry import Polygon, Point
 from rasterio.io import MemoryFile
 from shapely.ops import transform
 import geopandas as gpd
+import rasterio.mask
 import numpy as np
 import rasterio
 import pyproj
@@ -40,13 +41,13 @@ class crops_manager():
         _transform = rasterio.transform.from_bounds(*(bounds + (128, 128)))
         return MemoryFile().open(**{**self.profile, **{'transform': _transform, 'count': count}})
 
-    def __veg_shapes__(self, contours, tiff_f):
+    def __veg_shapes__(self, contours, tiff_f, coord=True):
         out = []
         for co in contours[1::2]:
             if PolyArea(co[:, 0, 0], co[:, 0, 1]) > 100:
                 _shape = []
                 for pcol, prow in co.squeeze():
-                    _shape.append(tiff_f.xy(prow, pcol))
+                    _shape.append(tiff_f.xy(prow, pcol) if coord else (pcol, prow))
                 out.append(Polygon(_shape))
         return out
 
@@ -60,7 +61,7 @@ class crops_manager():
         _d = self.metadata.to_crs(epsg=3035).centroid.distance(my_point)
         return _d[(_d >= min_distance) & (_d < max_distance)].sort_values()
 
-    def get_veg_shapes(self, id_crop, seg_type='semantic'):
+    def get_veg_shapes(self, id_crop, seg_type='semantic', coord=True):
         tiff_f = self.__retrieve_geo_ref__(id_crop)
 
         veg_mask = dm(os.path.join(self.source_dir, self.tile, id_crop)).get_veg_mask(seg_type=seg_type)[0]
@@ -72,7 +73,24 @@ class crops_manager():
             c, h = cv2.findContours((veg_mask == _l).astype(int),
                                     cv2.RETR_FLOODFILL,
                                     cv2.CHAIN_APPROX_SIMPLE)
-            shapes = self.__veg_shapes__(c, tiff_f)
+            shapes = self.__veg_shapes__(c, tiff_f, coord)
             out = out + [{'label': _l, 'geometry': _sh} for _sh in shapes]
         tiff_f.close()
         return gpd.GeoDataFrame(out)
+
+    def get_mask_by_longlat(self, long, lat, seg_type='semantic'):
+        id_crop = self.getId_by_longlat(long, lat)
+        _poly = []
+        if len(id_crop) > 0:
+            id_crop = id_crop[0]
+            _geo = self.get_veg_shapes(id_crop, seg_type=seg_type, coord=True)
+            _poly = _geo[_geo.contains(Point(long, lat))]
+
+        out = np.ones((128, 128))
+        if not _poly.empty:
+            _tiff = self.__retrieve_geo_ref__(id_crop)
+            _tiff.write(out, 1)
+            out, _ = rasterio.mask.mask(_tiff, [_poly.iloc[0].geometry], crop=False)
+            out = out.squeeze().astype(bool)
+
+        return out.astype(bool)

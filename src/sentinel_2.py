@@ -109,6 +109,13 @@ class data_manager(Indices):
     def get_data(self):
         return np.stack([np.load(x) for x in self.data_fnames], axis=0)
 
+    def get_data_from_date(self, dateref):
+        if dateref in self.df_records.index:
+            return np.load(self.df_records.loc[dateref].data)
+        else:
+            print('No data.')
+            return None
+
     def get_weath_mask(self):
         return np.stack([np.load(x) for x in self.mask_fnames], axis=0)
     
@@ -125,7 +132,7 @@ class data_manager(Indices):
                          data=counts/np.product(mask.shape))
         return out[out.index.isin([0, 19]) == False]
     
-    def get_index_ts(self, function, veg_type=None, seg_type='semantic'):
+    def get_index_ts(self, function, veg_type=None, seg_type='semantic', FMK=True):
         index, values = [], []
         veg_mask = self.get_veg_mask(seg_type=seg_type)
             
@@ -136,7 +143,7 @@ class data_manager(Indices):
                 VMK = (veg_mask[0] == veg_type)
             else:
                 VMK = (veg_mask[0] != 0) & (veg_mask[0] != 19)
-            npost = np.where((MK & VMK).squeeze())
+            npost = np.where((MK & VMK & FMK).squeeze())
 
             values.append(np.median(VI[npost]))
             index.append(i)
