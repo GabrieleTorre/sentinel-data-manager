@@ -56,6 +56,12 @@ class Indices:
                 (x[NIR_ind] - x[RED_ind]))**(1/2)) / 2
         return mavi, mask
 
+    def ndti(self, x):
+        RED_ind = self.bands['B04']
+        GRN_ind = self.bands['B03']
+        x, mask = self.get_valid_data(x)
+        return (x[RED_ind] - x[GRN_ind]) / (x[RED_ind] + x[GRN_ind])
+
 
 class data_manager(Indices):
 
@@ -67,13 +73,13 @@ class data_manager(Indices):
         bands = ["B02", "B03", "B04", "B05", "B06",
                  "B07", "B08", "B8A", "B11", "B12"]
         self.bands = {b: i for i, b in enumerate(bands)}
-        
+
         self.data_fnames = glob(join(source_dir, '20*.npy'))
         self.mask_fnames = glob(join(*[source_dir, 'cloudProb', '20*.npy']))
-        
+
         self.sem_fname  = glob(join(*[source_dir, 'crops_semantic.npy']))[0]
         self.pan_fname  = glob(join(*[source_dir, 'crops_panoptic.npy']))[0]
-        
+
         self.df_records = self.__get_df__()
 
         valid_selection = self.validate_cloud_snow_coverage()
@@ -111,24 +117,25 @@ class data_manager(Indices):
 
     def get_weath_mask(self):
         return np.stack([np.load(x) for x in self.mask_fnames], axis=0)
-    
+
     def get_veg_mask(self, seg_type='semantic'):
         return np.load(self.sem_fname if seg_type == 'semantic' else self.pan_fname)
-    
-    def descrive_veg_type_(self, seg_type='semantic'):
+
+    def describe_veg_type_(self, seg_type='semantic'):
         if seg_type == 'semantic':
             mask = np.load(self.sem_fname)[0]
         elif seg_type == 'panoptic':
             mask = np.load(self.pan_fname)[0]
         values, counts = np.unique(mask, return_counts=True)
-        out =  pd.Series(index=values.astype(int), 
+
+        out =  pd.Series(index=values.astype(int),
                          data=counts/np.product(mask.shape))
         return out[out.index.isin([0, 19]) == False]
-    
+
     def get_index_ts(self, function, veg_type=None, seg_type='semantic'):
         index, values = [], []
         veg_mask = self.get_veg_mask(seg_type=seg_type)
-            
+
         for i, row in self.df_records.iterrows():
 
             VI, MK = function(row)
@@ -142,3 +149,4 @@ class data_manager(Indices):
             index.append(i)
 
         return pd.Series(values, index=index, dtype=np.float64)
+d.Series(values, index=index, dtype=np.float64)
